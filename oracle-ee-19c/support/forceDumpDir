@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME sqlplus -s / as sysdba <<EOF
+  set termout off
+  SET FEEDBACK OFF
+  CREATE OR REPLACE directory dump_dir as '/opt/backup';
+  -- Hack to work around NFS/Virtualbox/Oracle problem with auto mounted VB shares
+  -- Without this you will get a ORA-27054 when trying to write to the share
+  alter system set events '10298 trace name context forever,level 32';
+  EXIT;
+EOF

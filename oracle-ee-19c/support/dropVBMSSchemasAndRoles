@@ -1,0 +1,37 @@
+#!/bin/bash
+
+schemaList=$(./support/buildVBMSSchemaNames)
+roleList=$(./support/buildVBMSRoleNames)
+
+for schema in $schemaList;
+do
+  docker exec -i --privileged $VBMS_DB_CONTAINER_NAME sqlplus -S / as sysdba <<EOF
+    SET HEADING OFF
+    SET PAGESIZE 0
+    SET LINESIZE 5000
+    SET FEEDBACK OFF
+    drop user $schema cascade;
+    EXIT;
+EOF
+done
+
+for role in $roleList;
+do
+  docker exec -i --privileged $VBMS_DB_CONTAINER_NAME sqlplus -S / as sysdba <<EOF
+    SET HEADING OFF
+    SET PAGESIZE 0
+    SET LINESIZE 5000
+    SET FEEDBACK OFF
+    drop role $role;
+    EXIT;
+EOF
+done
+
+
+# Remove the Liquibase tables from the sys schema - yeah that's right they are in the sys schema
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME sqlplus -S / as sysdba <<EOF
+  drop table sys.DATABASECHANGELOGLOCK cascade constraints;
+  drop table sys.DATABASECHANGELOG cascade constraints;
+  EXIT;
+EOF
+

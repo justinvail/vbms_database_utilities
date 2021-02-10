@@ -1,0 +1,41 @@
+#!/bin/bash
+
+echo "
+SET HEADING OFF
+SET PAGESIZE 0
+SET LINESIZE 5000
+SET FEEDBACK OFF
+
+SET SERVEROUTPUT ON
+
+ALTER profile DEFAULT limit password_life_time unlimited;
+
+-- Reset passwords for all accounts - only way to fix an expired account
+begin
+  for usr in (select NAME, PASSWORD from user$ where (NAME like 'VBMS%' or NAME='RESDBUSER') and PASSWORD is not null)
+  loop
+    begin
+      DBMS_OUTPUT.PUT_LINE('Resetting password for user ' || usr.NAME);
+      execute immediate 'alter user ' || usr.NAME || ' identified by values ''' || usr.PASSWORD || '''';
+    exception
+      WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error resetting password for user ' || usr.NAME);
+    end;
+  end loop;
+end;
+/
+
+-- Unlock all accounts
+begin
+  for usr in (select * from dba_users where username like 'VBMS%' or username='RESDBUSER' )
+  loop
+    DBMS_OUTPUT.PUT_LINE('Unlocking account for user ' || usr.userName);
+    execute immediate 'alter user ' || usr.userName || ' account unlock';
+  end loop;
+end;
+/
+
+SET SERVEROUTPUT OFF
+
+EXIT;
+"|docker exec -i --privileged $VBMS_DB_CONTAINER_NAME sqlplus -S / as sysdba

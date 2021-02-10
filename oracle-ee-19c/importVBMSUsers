@@ -1,0 +1,59 @@
+#!/bin/bash
+
+export inputDir="/opt/backup"
+
+echo "*********************************************************************"
+echo "*********** This script is destructive!!! If you continue ***********"
+echo "****** you will lose the contents in the following container: *******"
+echo "*********************************************************************"
+echo
+echo $VBMS_DB_CONTAINER_NAME
+echo
+read -p 'Do you wish to continue? (Y/N)' yesno
+if [ ! "Y" == "$yesno" ] 
+then
+  exit 0
+fi
+ 
+# Create a list of files to display
+fileList=$(find "$VBMS_DB_DUMP_LOCATION" -maxdepth 1 -name "*_export.dmp")
+echo Files: $fileList
+
+echo -e  "\n"
+echo Enter the number of the file you would like to import or 'q' to quit:
+select filename in $fileList; do
+   if [ ! -f  "$filename" ]; then
+      exit -1
+   fi
+   break;
+done
+echo -e "\n"
+
+#Force creation of the dump dir if it doesn't exist
+./support/forceDumpDir
+
+schemas=`./support/buildVBMSSchemaNames`
+
+echo Dropping existing schemas and roles...
+./support/dropVBMSSchemasAndRoles
+
+ fileName=$(basename $filename)
+ roleFileName=${fileName/_export/_roles}
+sysFileName=${fileName/_export/_export_sys}
+
+echo Importing roles from $roleFileName...
+
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME impdp  \'sys\/$VBMS_DB_PASSWORD@XE AS SYSDBA\' directory=dump_dir dumpfile=$roleFileName logfile=import_$roleFileName.role.log
+
+echo Importing sys Liquibase change log tables...
+
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME imp \'sys\/$VBMS_DB_PASSWORD@XE AS SYSDBA\' tables=DATABASECHANGELOG,DATABASECHANGELOGLOCK file="$inputDir/$sysFileName" log="$inputDir/import_$sysFileName.log"
+
+echo Importing from file $filename...
+
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME impdp \'sys\/$VBMS_DB_PASSWORD@XE AS SYSDBA\' directory=dump_dir dumpfile=$fileName logfile=import_$fileName.log
+
+echo Unlocking any locked or expired accounts...
+./support/unlockExpiredAccounts
+
+echo Done!

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+current_time=$(date "+%Y.%m.%d-%H.%M.%S")
+defaultFilename=dbdump
+
+read -p "Export filename [$defaultFilename]: " filename
+if [ -z "$filename" ]; then
+  filename=$defaultFilename
+fi
+
+outputDir="/opt/backup"
+
+#Force creation of the dump dir if it doesn't exist
+./support/forceDumpDir
+
+rolefilename="$filename"_"$current_time"_roles
+sysexportfilename="$filename"_"$current_time"_export_sys
+exportfilename="$filename"_"$current_time"_export
+
+echo Exporting to file $outputDir/$exportfilename.dmp...
+schemas=`./support/buildVBMSSchemaNames|while read line; do echo -n "$line,"; done`
+#Export roles
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME expdp \'sys\/$VBMS_DB_PASSWORD@XE AS SYSDBA\' full=y directory=dump_dir "include=ROLE:\"LIKE(\'VBMS%\')\"" dumpfile=$rolefilename.dmp logfile=$rolefilename.log
+#Export just the DATABASECHANGELOG and DATABASECHANGELOGLOCK tables from sys - must use the old export utility for this since expdp does
+#not support exporting tables owned by sys
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME exp \'sys\/$VBMS_DB_PASSWORD@XE AS SYSDBA\' statistics=none tables=sys.DATABASECHANGELOG,sys.DATABASECHANGELOGLOCK file="$outputDir/$sysexportfilename.dmp" log="$outputDir/$sysexportfilename.log"
+#Export schemas
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME expdp \'sys\/$VBMS_DB_PASSWORD@XE AS SYSDBA\' compression=all full=N schemas=$schemas directory=dump_dir dumpfile=$exportfilename.dmp logfile=$exportfilename.log

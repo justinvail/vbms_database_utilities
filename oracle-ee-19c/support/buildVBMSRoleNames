@@ -1,0 +1,11 @@
+#!/bin/sh
+
+docker exec -i --privileged $VBMS_DB_CONTAINER_NAME sqlplus -S / as sysdba <<EOF
+  SET HEADING OFF
+  SET PAGESIZE 0
+  SET LINESIZE 5000
+  SET FEEDBACK OFF
+  SELECT ROLE FROM DBA_ROLES where ROLE like 'VBMS%';
+  EXIT;
+EOF
+

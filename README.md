@@ -6,8 +6,8 @@ The data dump of a clean liquibase install is only about 15mb.
 The days of doing a 20+ minute liquibase clean install are over.  Just grab the dmp files from a friend.
 These scripts are completely compatible with the 19c image we are using.  
 
-##Instructions: 
-###Set these environment variables: 
+##Instructions:
+###Set these environment variables:
 These are suggested default values.  Change them at your own discretion. 
 ```
 export VBMS_DB_CONTAINER_NAME=vbms-dev-docker-19c

@@ -29,7 +29,19 @@ docker run \
         --shm-size=1g \
         --name=$VBMS_DB_CONTAINER_NAME oracledb19c/oracle.19.3.0-ee:oracle19.3.0-ee;
 ```
-Stop your container and start it back up normally. 
+
+Once you see the following message, you can kill the container with ```ctrl + c``` as the initial setup is complete. 
+
+```
+#########################
+DATABASE IS READY TO USE!
+#########################
+```
+
+To start the database for use, run the following command: 
+```
+docker container start vbms-dev-docker-19c
+```
 
 You can now either run liquibase to build you DB or import one with ./importVBMSUsers
 ```
